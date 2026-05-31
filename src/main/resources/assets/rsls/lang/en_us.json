@@ -1,4 +1,7 @@
 {
+  "options.rsls.title": "RSLS Config",
+  "options.rsls.category": "Settings",
+  "options.rsls.button": "RSLS Config",
   "options.rsls.maxSourcesCount": "Total sound limit",
   "options.rsls.maxStreamingSources": "Streaming sound limit"
 }

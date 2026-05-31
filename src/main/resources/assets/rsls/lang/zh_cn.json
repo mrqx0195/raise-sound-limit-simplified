@@ -1,0 +1,7 @@
+{
+  "options.rsls.title": "RSLS 配置",
+  "options.rsls.category": "设置",
+  "options.rsls.button": "RSLS 配置",
+  "options.rsls.maxSourcesCount": "总声音上限",
+  "options.rsls.maxStreamingSources": "流式声音上限"
+}

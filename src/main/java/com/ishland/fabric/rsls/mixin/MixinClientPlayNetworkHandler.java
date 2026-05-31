@@ -33,9 +33,9 @@ public class MixinClientPlayNetworkHandler {
     
     @Dynamic
     @ModifyExpressionValue(method = "handleSoundEvent", at = @At(value = "FIELD", target = "Lnet/minecraft/client/Minecraft;level:Lnet/minecraft/client/multiplayer/ClientLevel;", opcode = Opcodes.GETFIELD))
-    private <T extends PacketListener> ClientLevel checkWorldExistence(ClientLevel world, ClientboundSoundPacket packet,
-                                                                       @Share("rsls$thirdParam") LocalRef<Object> rsls$thirdParam,
-                                                                       @Share("rsls$originalOp") LocalRef<Operation<Void>> rsls$originalOperation) {
+    private ClientLevel checkWorldExistence(ClientLevel world, ClientboundSoundPacket packet,
+                                            @Share("rsls$thirdParam") LocalRef<Object> rsls$thirdParam,
+                                            @Share("rsls$originalOp") LocalRef<Operation<Void>> rsls$originalOperation) {
         if (world == null) {
             rsls$originalOperation.get().call(packet, this, rsls$thirdParam.get());
             return null;
