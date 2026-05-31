@@ -1,6 +1,6 @@
 package com.ishland.fabric.rsls.common;
 
-import com.ishland.fabric.rsls.RSLSInjectorFFM;
+import com.ishland.fabric.rsls.RSLSInjectorLWJGL;
 import org.lwjgl.openal.ALC10;
 import org.lwjgl.openal.ALC11;
 import org.lwjgl.system.MemoryStack;
@@ -8,9 +8,9 @@ import org.lwjgl.system.MemoryStack;
 import java.nio.IntBuffer;
 
 public class SourcesLimitProber {
-
+    
     public static int probeSourcesLimit() {
-        RSLSInjectorFFM.init();
+        RSLSInjectorLWJGL.init();
         final long device = ALC10.alcOpenDevice((String) null);
         checkALCError(device, "Open device");
         final long context = ALC10.alcCreateContext(device, (IntBuffer) null);
@@ -29,7 +29,7 @@ public class SourcesLimitProber {
         ALC10.alcCloseDevice(device);
         return sourcesCount;
     }
-
+    
     private static int getSourcesCount(IntBuffer attributes) {
         attributes.position(0);
         while (attributes.hasRemaining()) {
@@ -41,27 +41,23 @@ public class SourcesLimitProber {
         }
         return 30;
     }
-
+    
     private static void checkALCError(long device, String message) {
         final int error = ALC10.alcGetError(device);
-        if (error != 0) throw new RuntimeException("%s failed: %s".formatted(message, getAlcErrorMessage(error)));
-    }
-
-    private static String getAlcErrorMessage(int errorCode) {
-        switch(errorCode) {
-            case 40961:
-                return "Invalid device.";
-            case 40962:
-                return "Invalid context.";
-            case 40963:
-                return "Illegal enum.";
-            case 40964:
-                return "Invalid value.";
-            case 40965:
-                return "Unable to allocate memory.";
-            default:
-                return "An unrecognized error occurred.";
+        if (error != 0) {
+            throw new RuntimeException("%s failed: %s".formatted(message, getAlcErrorMessage(error)));
         }
     }
-
+    
+    private static String getAlcErrorMessage(int errorCode) {
+        return switch (errorCode) {
+            case 40961 -> "Invalid device.";
+            case 40962 -> "Invalid context.";
+            case 40963 -> "Illegal enum.";
+            case 40964 -> "Invalid value.";
+            case 40965 -> "Unable to allocate memory.";
+            default -> "An unrecognized error occurred.";
+        };
+    }
+    
 }

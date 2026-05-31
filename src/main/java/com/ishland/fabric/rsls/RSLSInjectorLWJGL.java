@@ -14,10 +14,9 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 
 public class RSLSInjectorLWJGL {
-
     private static final String libName;
     private static final ByteBuffer buf;
-
+    
     static {
         if (PlatformDependent.isWindows()) {
             libName = "msvcrt.dll";
@@ -26,7 +25,7 @@ public class RSLSInjectorLWJGL {
         } else {
             libName = "libc.so.6";
         }
-
+        
         try {
             String name = "rsls-alsoft.conf";
             final InputStream resource = RSLSInjectorLWJGL.class.getClassLoader().getResourceAsStream(name);
@@ -41,18 +40,20 @@ public class RSLSInjectorLWJGL {
                         try {
                             Files.deleteIfExists(tempFile);
                         } catch (Throwable t) {
-                            t.printStackTrace();
+                            RSLSMod.LOGGER.error("Failed to delete temp file", t);
                         }
                     }));
                     String envDefinition = "ALSOFT_CONF=" + current.relativize(tempFile);
-                    System.out.println(String.format("Attempting to invoke putenv(\"%s\")", envDefinition));
+                    RSLSMod.LOGGER.info("Attempting to invoke putenv(\"{}\")", envDefinition);
                     buf = MemoryUtil.memASCII(envDefinition);
                     final long address = MemoryUtil.memAddress(buf);
-
+                    
                     SharedLibrary libc = APIUtil.apiCreateLibrary(libName);
                     final long putenv = APIUtil.apiGetFunctionAddress(libc, PlatformDependent.isWindows() ? "_putenv" : "putenv");
                     final int result = JNI.invokePI(address, putenv);
-                    if (result != 0) throw new RuntimeException("Error %d when setting env".formatted(result));
+                    if (result != 0) {
+                        throw new RuntimeException("Error %d when setting env".formatted(result));
+                    }
                 } finally {
                     resource.close();
                 }
@@ -63,8 +64,7 @@ public class RSLSInjectorLWJGL {
             throw new RuntimeException(t);
         }
     }
-
+    
     public static void init() {
     }
-
 }

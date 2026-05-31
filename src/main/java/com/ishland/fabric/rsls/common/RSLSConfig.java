@@ -1,7 +1,8 @@
 package com.ishland.fabric.rsls.common;
 
-import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.util.math.MathHelper;
+import com.ishland.fabric.rsls.RSLSMod;
+import net.minecraft.util.Mth;
+import net.minecraftforge.fml.loading.FMLPaths;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -12,33 +13,30 @@ import java.nio.file.StandardOpenOption;
 import java.util.Properties;
 
 public class RSLSConfig {
-
-    private static final Path CONFIG_FILE = FabricLoader.getInstance().getConfigDir().resolve("rsls.properties");
+    private static final Path CONFIG_FILE = FMLPaths.CONFIGDIR.get().resolve("rsls.properties");
     public static final int probedMaxSourcesCount;
-
+    
     static {
         int count;
         try {
             count = SourcesLimitProber.probeSourcesLimit();
         } catch (Throwable t) {
-            System.err.println("Failed to probe max sources count, falling back to default value.");
-            t.printStackTrace();
+            RSLSMod.LOGGER.error("Failed to probe max sources count, falling back to default value.", t);
             count = RSLSConstants.expectedMaxSourcesCount;
         }
         probedMaxSourcesCount = count;
     }
-
+    
     public static int maxSourcesCount = probedMaxSourcesCount;
     public static int maxStreamingSources = 8;
-
+    
     static {
         loadConfig();
     }
-
+    
     public static void init() {
-        // intentionally empty
     }
-
+    
     public static void loadConfig() {
         final Properties properties = new Properties();
         if (Files.isRegularFile(CONFIG_FILE)) {
@@ -48,11 +46,11 @@ public class RSLSConfig {
                 throw new RuntimeException(e);
             }
         }
-        maxSourcesCount = MathHelper.clamp(getInt(properties, "maxSourcesCount", probedMaxSourcesCount), 32, probedMaxSourcesCount);
-        maxStreamingSources = MathHelper.clamp(getInt(properties, "maxStreamingSources", 8), 8, probedMaxSourcesCount);
+        maxSourcesCount = Mth.clamp(getInt(properties, "maxSourcesCount", probedMaxSourcesCount), 32, probedMaxSourcesCount);
+        maxStreamingSources = Mth.clamp(getInt(properties, "maxStreamingSources", 8), 8, probedMaxSourcesCount);
         saveConfig();
     }
-
+    
     public static void saveConfig() {
         final Properties properties = new Properties();
         properties.setProperty("maxSourcesCount", String.valueOf(maxSourcesCount));
@@ -63,7 +61,7 @@ public class RSLSConfig {
             throw new RuntimeException(e);
         }
     }
-
+    
     private static int getInt(Properties properties, String key, int def) {
         try {
             final int i = Integer.parseInt(properties.getProperty(key));

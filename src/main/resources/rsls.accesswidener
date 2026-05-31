@@ -1,4 +1,0 @@
-accessWidener	v1	named
-
-accessible    class    net/minecraft/client/sound/SoundManager$SoundList
-accessible    class    net/minecraft/client/option/GameOptions$Visitor

@@ -1,110 +1,192 @@
 plugins {
-	id 'org.relativitymc.neo-loom-remap' version '1.15-SNAPSHOT'
-	id 'maven-publish'
+    id 'idea'
+    id 'java-library'
+    id 'maven-publish'
+    id 'net.neoforged.moddev.legacyforge' version '2.0.91'
 }
 
 java {
-	sourceCompatibility = JavaVersion.VERSION_25
-	targetCompatibility = JavaVersion.VERSION_25
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+tasks.named('wrapper', Wrapper).configure {
+    distributionType = Wrapper.DistributionType.BIN
+}
+
+version = mod_version
+group = mod_group_id
+
+repositories.clear()
+repositories {
+    // Mirror Maven
+    maven {
+        url = "https://neoforged.forgecdn.net/releases"
+    }
+    maven {
+        url = "https://neoforged.forgecdn.net/mojang-meta"
+    }
+
+    maven {
+        url = "https://maven.minecraftforge.net/"
+    }
+    maven {
+        url = "https://libraries.minecraft.net/"
+    }
+
+    mavenLocal()
+
+    maven {
+        url = "https://api.modrinth.com/maven"
+        content {
+            includeGroup "maven.modrinth"
+        }
+    }
+    maven {
+        name = "ModMaven"
+        url = "https://modmaven.dev"
+    }
+    maven {
+        name = "Cloth Config"
+        url = "https://maven.shedaniel.me/"
+    }
+
+    mavenCentral()
+
+    flatDir {
+        dir 'libs'
+    }
 }
 
 base {
-	archivesName = project.archives_base_name
+    archivesName = "${mod_file_name}-${minecraft_version}"
 }
 
-version = project.mod_version
-group = project.maven_group
+legacyForge {
+    version = project.minecraft_version + '-' + project.forge_version
 
-repositories {
-	mavenCentral()
+    parchment {
+        mappingsVersion = project.parchment_mappings_version
+        minecraftVersion = project.parchment_minecraft_version
+    }
 
-	// Add repositories to retrieve artifacts from in here.
-	// You should only use this when depending on other mods because
-	// Loom adds the essential maven repositories to download Minecraft and libraries from automatically.
-	// See https://docs.gradle.org/current/userguide/declaring_repositories.html
-	// for more information about repositories.
+    runs {
+        client {
+            client()
+            gameDirectory = project.file('run/client')
+            systemProperty 'forge.enabledGameTestNamespaces', project.mod_id
+        }
 
-	maven {
-		url = "https://repo.codemc.io/repository/relativitymc/"
-	}
-	maven { url = "https://maven.shedaniel.me/" }
+        server {
+            server()
+            gameDirectory = project.file('run/server')
+            programArgument '--nogui'
+            systemProperty 'forge.enabledGameTestNamespaces', project.mod_id
+        }
+
+        gameTestServer {
+            type = "gameTestServer"
+            gameDirectory = project.file('run/gametest')
+            systemProperty 'forge.enabledGameTestNamespaces', project.mod_id
+        }
+
+        data {
+            data()
+            gameDirectory = project.file('run/data')
+            programArguments.addAll '--mod', project.mod_id, '--all', '--output', file('src/generated/resources/').getAbsolutePath(), '--existing', file('src/main/resources/').getAbsolutePath()
+        }
+
+        configureEach {
+            systemProperty 'forge.logging.markers', 'REGISTRIES'
+            logLevel = org.slf4j.event.Level.DEBUG
+
+            systemProperty 'forge.logging.console.level', 'debug'
+            systemProperty 'mixin.debug.export', 'true'
+        }
+    }
+
+    mods {
+        "${mod_id}" {
+            sourceSet(sourceSets.main)
+        }
+    }
+}
+
+sourceSets.main.resources { srcDir 'src/generated/resources' }
+
+configurations {
+    runtimeClasspath.extendsFrom localRuntime
+}
+obfuscation {
+    createRemappingConfiguration(configurations.localRuntime)
 }
 
 dependencies {
-	// To change the versions see the gradle.properties file
-	minecraft "com.mojang:minecraft:${project.minecraft_version}"
-	mappings "org.relativitymc:modern-yarn:${project.yarn_mappings}:v2"
-	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
-
-	modImplementation fabricApi.module("fabric-resource-loader-v0", project.fabric_version)
-//	modCompileOnly "me.shedaniel.cloth:cloth-config-fabric:19.0.146"
-
-	testImplementation 'org.junit.jupiter:junit-jupiter:5.13.4'
-	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    implementation "org.jetbrains:annotations:17.0.0"
+    compileOnly(annotationProcessor("io.github.llamalad7:mixinextras-common:0.5.0"))
+    implementation(jarJar("io.github.llamalad7:mixinextras-forge:0.5.0"))
+    implementation "me.shedaniel.cloth:cloth-config-forge:11.1.136"
+    annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
 }
 
-test {
-	useJUnitPlatform()
-	environment "ALSOFT_LOGLEVEL", "3"
-	workingDir project.buildDir
-	testLogging {
-		showStandardStreams = true
-		exceptionFormat = 'full'
-	}
-}
-
-loom {
-	accessWidenerPath = file("src/main/resources/rsls.accesswidener")
-
-	useIntermediateMappings = true
-	intermediaryUrl = 'https://repo.codemc.io/repository/relativitymc/org/relativitymc/intermediary/%1$s/intermediary-%1$s-v2.jar'
-}
-
-processResources {
-	inputs.property "version", project.version
-
-	filesMatching("fabric.mod.json") {
-		expand "version": project.version
-	}
-}
-
-tasks.withType(JavaCompile).configureEach {
-	// Minecraft 1.18 (1.18-pre2) upwards uses Java 17.
-	it.options.release = 25
-}
-
-java {
-	// Loom will automatically attach sourcesJar to a RemapSourcesJar task and to the "build" task
-	// if it is present.
-	// If you remove this line, sources will not be generated.
-	withSourcesJar()
+mixin {
+    add sourceSets.main, "${mod_id}.refmap.json"
+    config "${mod_id}.mixins.json"
 }
 
 jar {
-	from("LICENSE") {
-		rename { "${it}_${project.archives_base_name}"}
-	}
+    manifest.attributes([
+            "MixinConfigs": "${mod_id}.mixins.json"
+    ])
 }
 
-afterEvaluate {
-	migrateMappings.configure {
-		outputDir = project.file("src/main/java")
-	}
+var generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {
+    var replaceProperties = [
+            minecraft_version      : minecraft_version,
+            minecraft_version_range: minecraft_version_range,
+            forge_version          : forge_version,
+            forge_version_range    : forge_version_range,
+            loader_version_range   : loader_version_range,
+            mod_id                 : mod_id,
+            mod_name               : mod_name,
+            mod_license            : mod_license,
+            mod_version            : mod_version,
+            mod_authors            : mod_authors,
+            mod_description        : mod_description
+    ]
+    inputs.properties replaceProperties
+    expand replaceProperties
+    from "src/main/templates"
+    into "build/generated/sources/modMetadata"
 }
 
-// configure the maven publication
+sourceSets.main.resources.srcDir generateModMetadata
+legacyForge.ideSyncTask generateModMetadata
+
 publishing {
-	publications {
-		mavenJava(MavenPublication) {
-			from components.java
-		}
-	}
+    publications {
+        register('mavenJava', MavenPublication) {
+            from components.java
+        }
+    }
+    repositories {
+        maven {
+            url "file://${project.projectDir}/repo"
+        }
+    }
+}
 
-	// See https://docs.gradle.org/current/userguide/publishing_maven.html for information on how to set up publishing.
-	repositories {
-		// Add repositories to publish to here.
-		// Notice: This block does NOT have the same function as the block in the top level.
-		// The repositories here will be used for publishing your artifact, not for
-		// retrieving dependencies.
-	}
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+idea {
+    module {
+        downloadSources = true
+        downloadJavadoc = true
+    }
+}
+
+java {
+    withSourcesJar()
 }
